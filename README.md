@@ -14,6 +14,7 @@ The image uses the AWS CLI to create the Route53 records. In order for this to w
       "Effect": "Allow",
       "Action": [
         "elasticloadbalancing:DescribeLoadBalancers",
+        "route53:GetHostedZone",
         "route53:ChangeResourceRecordSets"
       ],
       "Resource": [
