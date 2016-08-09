@@ -66,7 +66,7 @@ spec:
         - name: DNS_NAME
           value: kubernetes-dashboard
         - name: EVALUATE_TARGET_HEALTH # optional - defaults to 'true'
-          value: true
+          value: "true"
 ```
 
 In the example, assuming the hosted zone ID had the domain example.com, the result would be a route53 alias record for kubernetes-dashboard.example.com which points to the AWS load balancer for the kubernetes service named kubernetes-dashboard.
