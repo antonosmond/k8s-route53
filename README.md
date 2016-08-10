@@ -5,7 +5,7 @@ When using services in kubernetes with AWS load balancers, the load balancer DNS
 This image is designed to be run as a job in kubernetes and will create an AWS Route53 record for the FQDN you specify, which points to the AWS ELB for the kubernetes service you specify.
 
 IMPORTANT:
-This uses the AWS CLI to look up the available hosted zones in Route53 and matches against the FQDN you provide.
+This uses the AWS CLI to look up the available hosted zones in Route53 and matches the domain against the FQDN you provide.
 If you provide an FQDN and don't have a matching zone in Route53 with that domain then the job will fail.  
 
 ### AWS credentials
@@ -50,7 +50,7 @@ spec:
           value: kubernetes-dashboard          
         - name: SERVICE_NAMESPACE # optional - defaults to 'default'
           value: kube-system
-        - name: DNS_FQDN
+        - name: FQDN
           value: kubernetes-dashboard.example.com
         - name: EVALUATE_TARGET_HEALTH # optional - defaults to 'true'
           value: "true"

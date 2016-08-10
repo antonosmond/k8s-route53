@@ -2,9 +2,9 @@
 set -e
 
 # Get the hosted zone ID for the requested FQDN
-DNS_FQDN=$(echo "$DNS_FQDN" | sed 's|\.*$|.|')
+FQDN=$(echo "$FQDN" | sed 's|\.*$|.|')
 HOSTED_ZONE_ID=$(aws route53 list-hosted-zones | \
-  jq -r --arg DNS_FQDN "$DNS_FQDN" '.HostedZones | map(select(.Name | inside($DNS_FQDN))) | max_by(.Name | length) | .Id | ltrimstr("/hostedzone/")')
+  jq -r --arg FQDN "$FQDN" '.HostedZones | map(select(.Name | inside($FQDN))) | max_by(.Name | length) | .Id | ltrimstr("/hostedzone/")')
 
 # Get the AWS ELB details
 REGION=$(curl -s 169.254.169.254/latest/dynamic/instance-identity/document | jq -r .region)
@@ -25,7 +25,7 @@ echo "Kubernetres Service   : $SERVICE_NAME"
 echo "AWS Region            : $REGION"
 echo "ELB DNS               : $ELB_DNS"
 echo "ELB Hosted Zone ID    : $ELB_HOSTED_ZONE_ID"
-echo "DNS FQDN              : $DNS_FQDN"
+echo "FQDN                  : $FQDN"
 echo "Route53 Hosted Zone ID: $HOSTED_ZONE_ID"
 echo "Evaluate Target Health: $EVALUATE_TARGET_HEALTH"
 
@@ -35,7 +35,7 @@ CHANGE_BATCH="{
     {
       \"Action\": \"UPSERT\",
       \"ResourceRecordSet\": {
-        \"Name\": \"$DNS_FQDN\",
+        \"Name\": \"$FQDN\",
         \"Type\": \"A\",
         \"AliasTarget\": {
           \"HostedZoneId\": \"$ELB_HOSTED_ZONE_ID\",
@@ -51,7 +51,7 @@ echo -e "\nCHANGE BATCH"
 echo "------------"
 echo "$CHANGE_BATCH"
 
+# Submit the change batch request
 echo -e "\nRESULT"
 echo "------"
-# Submit the change batch request
 aws route53 change-resource-record-sets --hosted-zone-id "$HOSTED_ZONE_ID" --change-batch "$CHANGE_BATCH"
