@@ -50,7 +50,7 @@ spec:
           value: kubernetes-dashboard          
         - name: SERVICE_NAMESPACE # optional - defaults to 'default'
           value: kube-system
-        - name: FQDN
+        - name: DNS_FQDN
           value: kubernetes-dashboard.example.com
         - name: EVALUATE_TARGET_HEALTH # optional - defaults to 'true'
           value: "true"
