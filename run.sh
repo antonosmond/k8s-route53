@@ -10,10 +10,26 @@ HOSTED_ZONE_ID=$(aws route53 list-hosted-zones | \
 REGION=$(curl -s 169.254.169.254/latest/dynamic/instance-identity/document | jq -r .region)
 KUBE_TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
 ELB_DNS=$(curl -sSk -H "Authorization: Bearer $KUBE_TOKEN" \
-  "https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT/api/v1/namespaces/kube-system/services/$SERVICE_NAME" | \
+  "https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT/api/v1/namespaces/$SERVICE_NAMESPACE/services/$SERVICE_NAME" | \
   jq -r '.status.loadBalancer.ingress[0].hostname')
-ELB_NAME=$(echo "$ELB_DNS" | awk -F '-' '{ print $2 }')
+ELB_NAME=$(aws --region "$REGION" elb describe-load-balancers | \
+  jq -r --arg ELB_DNS "$ELB_DNS" '.LoadBalancerDescriptions | map(select(.DNSName == $ELB_DNS))[0].LoadBalancerName')
 ELB_HOSTED_ZONE_ID=$(aws --region "$REGION" elb describe-load-balancers --load-balancer-name "$ELB_NAME" | jq -r .LoadBalancerDescriptions[0].CanonicalHostedZoneNameID)
+
+# Default EVALUATE_TARGET_HEALTH if not already set
+EVALUATE_TARGET_HEALTH="${EVALUATE_TARGET_HEALTH:-true}"
+
+echo -e "\nCONFIG"
+echo "------"
+echo "Kubernetes Namespace  : $SERVICE_NAMESPACE"
+echo "Kubernetres Service   : $SERVICE_NAME"
+echo "AWS Region            : $REGION"
+echo "ELB Name              : $ELB_NAME"
+echo "ELB DNS               : $ELB_DNS"
+echo "ELB Hosted Zone ID    : $ELB_HOSTED_ZONE_ID"
+echo "FQDN                  : $FQDN"
+echo "Route53 Hosted Zone ID: $HOSTED_ZONE_ID"
+echo "Evaluate Target Health: $EVALUATE_TARGET_HEALTH"
 
 # Create the change batch record to add the DNS entry in the given AWS hosted zone
 CHANGE_BATCH="{
@@ -26,12 +42,18 @@ CHANGE_BATCH="{
         \"AliasTarget\": {
           \"HostedZoneId\": \"$ELB_HOSTED_ZONE_ID\",
           \"DNSName\": \"$ELB_DNS\",
-          \"EvaluateTargetHealth\": ${EVALUATE_TARGET_HEALTH:-true}
+          \"EvaluateTargetHealth\": $EVALUATE_TARGET_HEALTH
         }
       }
     }
   ]
 }"
 
+echo -e "\nCHANGE BATCH"
+echo "------------"
+echo "$CHANGE_BATCH"
+
+echo -e "\nRESULT"
+echo "------"
 # Submit the change batch request
 aws route53 change-resource-record-sets --hosted-zone-id "$HOSTED_ZONE_ID" --change-batch "$CHANGE_BATCH"

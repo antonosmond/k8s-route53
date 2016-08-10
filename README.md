@@ -2,10 +2,14 @@
 Creates an Amazon Route53 DNS entry for a Kubernetes service which uses an AWS load balancer.
 
 When using services in kubernetes with AWS load balancers, the load balancer DNS name is unfriendly.
-This image is designed to be run as a job in kubernetes and for a given kubernetes service and AWS Route53 hosted zone it will create a DNS record with the name you specify.
+This image is designed to be run as a job in kubernetes and will create an AWS Route53 record for the FQDN you specify, which points to the AWS ELB for the kubernetes service you specify.
+
+IMPORTANT:
+This uses the AWS CLI to look up the available hosted zones in Route53 and matches against the FQDN you provide.
+If you provide an FQDN and don't have a matching zone in Route53 with that domain then the job will fail.  
 
 ### AWS credentials
-The image uses the AWS CLI to create the Route53 records. In order for this to work your kubernetes worker instances must either have an IAM role associated with them or credentials will need to be provided to the container. The following rules are needed:
+As the image uses the AWS CLI your kubernetes worker instances must either have an IAM role associated with them or credentials will need to be provided to the container. The following rules are needed:
 ```json
 {
   "Version": "2012-10-17",
@@ -14,7 +18,7 @@ The image uses the AWS CLI to create the Route53 records. In order for this to w
       "Effect": "Allow",
       "Action": [
         "elasticloadbalancing:DescribeLoadBalancers",
-        "route53:GetHostedZone",
+        "route53:ListHostedZones",
         "route53:ChangeResourceRecordSets"
       ],
       "Resource": [
@@ -25,24 +29,8 @@ The image uses the AWS CLI to create the Route53 records. In order for this to w
 }
 ```
 
-### Example kubernetes definitions
+### Example kubernetes definition
 ```yaml
----
-apiVersion: v1
-kind: Service
-metadata:
-  labels:
-    app: kubernetes-dashboard
-  name: kubernetes-dashboard
-  namespace: kube-system
-spec:
-  type: LoadBalancer
-  ports:
-  - port: 80
-    targetPort: 9090
-  selector:
-    app: kubernetes-dashboard
----
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -56,18 +44,16 @@ spec:
       restartPolicy: Never
       containers:
       - name: kubernetes-dashboard-dns
-        image: antonosmond/k8s-route53
+        image: antonosmond/k8s-route53:latest
         env:
         - name: SERVICE_NAME
           value: kubernetes-dashboard          
         - name: SERVICE_NAMESPACE # optional - defaults to 'default'
           value: kube-system
-        - name: HOSTED_ZONE_ID
-          value: A1B1CD23ABCDEF
-        - name: DNS_NAME
-          value: kubernetes-dashboard
+        - name: FQDN
+          value: kubernetes-dashboard.example.com
         - name: EVALUATE_TARGET_HEALTH # optional - defaults to 'true'
           value: "true"
 ```
 
-In the example, assuming the hosted zone ID had the domain example.com, the result would be a route53 alias record for kubernetes-dashboard.example.com which points to the AWS load balancer for the kubernetes service named kubernetes-dashboard.
+The result from the example above would be a Route53 alias record with the FQDN kubernetes-dashboard.example.com which points to the AWS load balancer for the kubernetes service named kubernetes-dashboard.
