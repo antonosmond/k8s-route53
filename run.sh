@@ -1,6 +1,10 @@
 #!/bin/bash
 set -e
 
+# Set defaults for optional values
+SERVICE_NAMESPACE="${SERVICE_NAMESPACE:-default}"
+EVALUATE_TARGET_HEALTH="${EVALUATE_TARGET_HEALTH:-true}"
+
 # Get the hosted zone ID for the requested FQDN
 FQDN=$(echo "$FQDN" | sed 's|\.*$|.|')
 HOSTED_ZONE_ID=$(aws route53 list-hosted-zones | \
@@ -15,9 +19,7 @@ ELB_DNS=$(curl -sSk -H "Authorization: Bearer $KUBE_TOKEN" \
 ELB_HOSTED_ZONE_ID=$(aws --region "$REGION" elb describe-load-balancers | \
   jq -r --arg ELB_DNS "$ELB_DNS" '.LoadBalancerDescriptions | map(select(.DNSName == $ELB_DNS))[0].CanonicalHostedZoneNameID')
 
-# Default EVALUATE_TARGET_HEALTH if not already set
-EVALUATE_TARGET_HEALTH="${EVALUATE_TARGET_HEALTH:-true}"
-
+# Output config values
 echo -e "\nCONFIG"
 echo "------"
 echo "Kubernetes Namespace  : $SERVICE_NAMESPACE"
