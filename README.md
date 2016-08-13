@@ -1,4 +1,9 @@
 # k8s-route53
+
+### Tags
+* `latest`, `1`, `1.0`, `1.0.1`
+* `1.0.0`
+
 Creates an Amazon Route53 DNS entry for a Kubernetes service which uses an AWS load balancer.
 
 When using services in kubernetes with AWS load balancers, the load balancer DNS name is unfriendly.
