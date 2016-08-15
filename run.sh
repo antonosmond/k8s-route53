@@ -1,5 +1,4 @@
 #!/bin/bash
-set -e
 
 # Set defaults for optional values
 SERVICE_NAMESPACE="${SERVICE_NAMESPACE:-default}"
@@ -84,4 +83,5 @@ echo "$CHANGE_BATCH"
 # Submit the change batch request
 echo -e "\nRESULT"
 echo "------"
+
 aws route53 change-resource-record-sets --hosted-zone-id "$HOSTED_ZONE_ID" --change-batch "$CHANGE_BATCH"
